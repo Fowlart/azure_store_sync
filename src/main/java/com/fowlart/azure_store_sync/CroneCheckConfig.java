@@ -21,8 +21,12 @@ import java.util.concurrent.Executors;
 @EnableScheduling
 public class CroneCheckConfig implements SchedulingConfigurer {
 
-    @Autowired
+    final
     Environment env;
+
+    public CroneCheckConfig(Environment env) {
+        this.env = env;
+    }
 
     public Executor taskExecutor() {
         return Executors.newScheduledThreadPool(100);
