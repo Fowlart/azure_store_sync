@@ -91,16 +91,22 @@ public class CroneCheckConfig implements SchedulingConfigurer {
                     existInBlobButNotInLocal.forEach(fname -> {
                         BlobClient blobClient = containerClient.getBlobClient(fname);
                         System.out.println("downloading file " + blobClient.getContainerName() + "/" + blobClient.getBlobName());
-                        // todo: here we can work a lot with blob properties
-                        {
-                            var props = blobClient.getProperties();
-                            System.out.println("size: " + props.getBlobSize());
-                            System.out.println("access tier: " + props.getAccessTier());
-                            System.out.println("blob type: " + props.getBlobType().toString());
-                        }
                         blobClient.downloadToFile(localFolderPath + "/" + fname);
                     });
                 }
+                System.exit(0);
+            }
+
+            if ("INVENTORY".equalsIgnoreCase(env.getProperty("spring.main.mode"))) {
+                filesInBlob.forEach(blob->{
+                    BlobClient blobClient = containerClient.getBlobClient(blob);
+                    var props = blobClient.getProperties();
+                    System.out.println("name: "+blob);
+                    System.out.println("size: " + props.getBlobSize());
+                    System.out.println("access tier: " + props.getAccessTier());
+                    System.out.println("blob type: " + props.getBlobType().toString());
+                    System.out.println("last accessed: " + props.getLastAccessedTime());
+                });
                 System.exit(0);
             }
 
