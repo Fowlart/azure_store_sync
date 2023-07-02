@@ -44,7 +44,6 @@ public class CroneCheckConfig implements SchedulingConfigurer {
             var containerName = env.getProperty("azure.storage.container.name");
             var connectionString = env.getProperty("azure.storage.connection.string");
             var localFolderPath = env.getProperty("local.folder.path");
-            System.out.println("Tick; execute mode: "+env.getProperty("spring.main.mode"));
 
             BlobServiceClient blobServiceClient = new BlobServiceClientBuilder().connectionString(Objects.requireNonNull(connectionString)).buildClient();
             BlobContainerClient containerClient = blobServiceClient.createBlobContainerIfNotExists(containerName);
