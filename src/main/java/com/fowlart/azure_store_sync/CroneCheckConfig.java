@@ -97,6 +97,7 @@ public class CroneCheckConfig implements SchedulingConfigurer {
                 System.exit(0);
             }
 
+            // Todo: create last accessed logging function
             if ("INVENTORY".equalsIgnoreCase(env.getProperty("spring.main.mode"))) {
                 filesInBlob.forEach(blob->{
                     BlobClient blobClient = containerClient.getBlobClient(blob);
