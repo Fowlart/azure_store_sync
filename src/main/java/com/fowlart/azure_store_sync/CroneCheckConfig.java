@@ -40,17 +40,19 @@ public class CroneCheckConfig implements SchedulingConfigurer {
 
         taskRegistrar.addTriggerTask(() -> {
 
-            // 1 -  list all items in container
+
             var containerName = env.getProperty("azure.storage.container.name");
             var connectionString = env.getProperty("azure.storage.connection.string");
             var localFolderPath = env.getProperty("local.folder.path");
+            System.out.println("Tick; execute mode: "+env.getProperty("spring.main.mode"));
 
             BlobServiceClient blobServiceClient = new BlobServiceClientBuilder().connectionString(Objects.requireNonNull(connectionString)).buildClient();
             BlobContainerClient containerClient = blobServiceClient.createBlobContainerIfNotExists(containerName);
 
+            // list all items in container
             var filesInBlob = containerClient.listBlobs().stream().map(BlobItem::getName).collect(Collectors.toSet());
 
-            // 2 - set up local DIR, sync files between local DIR and blob
+            // set up local DIR, sync files between local DIR and blob
             var localFolder = new File(localFolderPath);
 
             if (!localFolder.exists()) {
@@ -63,30 +65,44 @@ public class CroneCheckConfig implements SchedulingConfigurer {
 
             var existInLocalButNotInBlob = localFiles.stream().filter(lf -> !filesInBlob.contains(lf)).collect(Collectors.toSet());
 
-            // if we have some files in blob that need to be downloaded
-            if (!existInBlobButNotInLocal.isEmpty()) {
+            if ("PUSH".equalsIgnoreCase(env.getProperty("spring.main.mode"))) {
 
+                // if we have some files locally that need to be downloaded
+                if (!existInLocalButNotInBlob.isEmpty()) {
+                    existInLocalButNotInBlob.forEach(fname -> {
+                        BlobClient blobClient = containerClient.getBlobClient(fname);
+                        System.out.println("uploading file " + blobClient.getContainerName() + "/" + blobClient.getBlobName());
+                        blobClient.uploadFromFile(localFolderPath + "/" + fname);
+                    });
+                }
+
+                // delete redundancy in BLOB
                 existInBlobButNotInLocal.forEach(fname -> {
                     BlobClient blobClient = containerClient.getBlobClient(fname);
-                    System.out.println("downloading file " + blobClient.getContainerName() + "/" + blobClient.getBlobName());
-                    // todo: here we can work a lot with blob properties
-                    {
-                        var props = blobClient.getProperties();
-                        System.out.println("size: " + props.getBlobSize());
-                        System.out.println("access tier: " + props.getAccessTier());
-                        System.out.println("blob type: " + props.getBlobType().toString());
-                    }
-                    blobClient.downloadToFile(localFolderPath + "/" + fname);
+                    blobClient.deleteIfExists();
+                    System.out.println("deleting file with name NAME, result: RESULT".replaceAll("NAME", fname).replaceAll("RESULT", Boolean.toString(blobClient.deleteIfExists())));
                 });
             }
 
-            // if we have some files locally that need to be downloaded
-            if (!existInLocalButNotInBlob.isEmpty()) {
-                existInLocalButNotInBlob.forEach(fname -> {
-                    BlobClient blobClient = containerClient.getBlobClient(fname);
-                    System.out.println("uploading file " + blobClient.getContainerName() + "/" + blobClient.getBlobName());
-                    blobClient.uploadFromFile(localFolderPath + "/" + fname);
-                });
+
+            if ("FETCH".equalsIgnoreCase(env.getProperty("spring.main.mode"))){
+                // if we have some files in blob that need to be downloaded
+                if (!existInBlobButNotInLocal.isEmpty()) {
+
+                    existInBlobButNotInLocal.forEach(fname -> {
+                        BlobClient blobClient = containerClient.getBlobClient(fname);
+                        System.out.println("downloading file " + blobClient.getContainerName() + "/" + blobClient.getBlobName());
+                        // todo: here we can work a lot with blob properties
+                        {
+                            var props = blobClient.getProperties();
+                            System.out.println("size: " + props.getBlobSize());
+                            System.out.println("access tier: " + props.getAccessTier());
+                            System.out.println("blob type: " + props.getBlobType().toString());
+                        }
+                        blobClient.downloadToFile(localFolderPath + "/" + fname);
+                    });
+                }
+                System.exit(0);
             }
 
         }, triggerContext -> Instant.now().plusSeconds(Integer.parseInt(Objects.requireNonNull(env.getProperty("time.tick")))));
