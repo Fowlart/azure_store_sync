@@ -106,7 +106,7 @@ public class CroneCheckConfig implements SchedulingConfigurer {
                     System.out.println("size: " + props.getBlobSize());
                     System.out.println("access tier: " + props.getAccessTier());
                     System.out.println("blob type: " + props.getBlobType().toString());
-                    System.out.println("last accessed: " + props.getLastAccessedTime());
+                    System.out.println("last accessed: " + props.getLastAccessedTime()+"\n");
                 });
                 System.exit(0);
             }
